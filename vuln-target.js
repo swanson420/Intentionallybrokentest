@@ -20,7 +20,7 @@ const crypto = require('crypto');
 
 const PORT = +process.env.PORT || 4000;
 const CB_PORT = +process.env.CB_PORT || 4001;
-const HOST = process.env.HOST || (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID ? '0.0.0.0' : '127.0.0.1');
+const HOST = process.env.HOST || (process.env.RENDER || process.env.RAILWAY_ENVIRONMENT || process.env.FLY_APP_NAME || process.env.KOYEB_APP_NAME ? '0.0.0.0' : '127.0.0.1');
 let fixed = process.env.FIXED === '1';
 
 // ---------- state ----------
@@ -205,14 +205,17 @@ route('GET', '/fail/authz/secret', (req, res) => {
 });
 
 // --- IDOR ---
-route('GET', '/fail/idor/orders', (req, res, u) => {
+const idor = (req, res, u) => {
   const { user } = authUser(req);
   if (!user) return send(res, 401, { error: 'unauthorized' });
-  const o = ORDERS[u.searchParams.get('id')];
+  const pathId = u.pathname.split('/').pop();
+  const o = ORDERS[u.searchParams.get('id') || pathId];
   if (!o) return send(res, 404, { error: 'not found' });
   if (fixed && o.ownerId !== user.id && user.role !== 'admin') return send(res, 403, { error: 'forbidden' });
   send(res, 200, o);
-});
+};
+route('GET', '/fail/idor/orders', idor);       // ?id=1
+route('GET', '/fail/idor/orders/*', idor);     // /fail/idor/orders/1  (path style)
 
 // --- BFLA ---
 route('POST', '/fail/bfla/admin/delete-user', (req, res, u) => {
