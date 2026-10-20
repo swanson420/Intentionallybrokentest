@@ -1,7 +1,0 @@
-{
-  "name": "mercyzero-fail-target",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": { "start": "node vuln-target.js" },
-  "engines": { "node": ">=18" }
-}
