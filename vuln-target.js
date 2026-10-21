@@ -270,6 +270,16 @@ route('GET', '/uploads/*', (req, res, u) => {
   res.end(f.buf);
 });
 
+// --- app hardening: leaks stack trace + 500 on hostile input ---
+route('GET', '/fail/hardening', (req, res, u) => {
+  const vals = [...u.searchParams.values()];
+  if (vals.length === 0) return send(res, 200, { ok: true, hint: 'add a query parameter' });
+  if (fixed) return send(res, 400, { error: 'invalid input' });
+  const bad = vals.find((v) => /['"<>;%\\{}]|\.\.|\$|\x00/.test(v) || v.length > 200) || vals[0];
+  const e = new Error(`Unhandled input: ${bad.slice(0, 80)}`);
+  send(res, 500, `Internal Server Error\n${e.stack}\n    at /opt/render/project/src/vuln-target.js:handler\nDB_HOST=10.0.3.7 NODE_ENV=production`);
+});
+
 // --- SSRF ---
 route('GET', '/fail/ssrf', async (req, res, u) => {
   const target = u.searchParams.get('url');
