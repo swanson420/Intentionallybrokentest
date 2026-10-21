@@ -302,6 +302,20 @@ const server = http.createServer(async (req, res) => {
   hits[u.pathname] = (hits[u.pathname] || 0) + 1;
   hardening(res);
 
+  // --- SSRF via header: MERCYZERO sends x-mercyzero-callback-url; vulnerable mode fetches it ---
+  const cbHdr = req.headers['x-mercyzero-callback-url'];
+  if (!fixed && typeof cbHdr === 'string') {
+    try {
+      const t = new URL(cbHdr);
+      const host = t.hostname;
+      const privateNet = /^(169\.254\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host.endsWith('.internal') || host === 'metadata.google.internal';
+      // Safety rail: only callback-shaped paths, never private/metadata ranges.
+      if (/^https?:$/.test(t.protocol) && t.pathname.startsWith('/ssrf-callback/') && !privateNet) {
+        fetch(t, { signal: AbortSignal.timeout(5000) }).catch(() => {});
+      }
+    } catch { /* ignore bad url */ }
+  }
+
   if (req.method === 'OPTIONS') { // permissive preflight in vulnerable mode
     if (!fixed && req.headers.origin) {
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
