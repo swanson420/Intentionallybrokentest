@@ -227,6 +227,14 @@ route('POST', '/fail/bfla/admin/delete-user', (req, res, u) => {
   send(res, 200, { deleted: u.searchParams.get('id') || '2', by: user.name });
 });
 
+// --- BFLA (GET variant for GET-only checks): admin page that only checks login, not role ---
+route('GET', '/fail/admin/users', (req, res) => {
+  const { user } = authUser(req);
+  if (!user) return send(res, 401, { error: 'unauthorized' });
+  if (fixed && user.role !== 'admin') return send(res, 403, { error: 'admin only' });
+  send(res, 200, { users: [{ id: 1, name: 'alice', role: 'user' }, { id: 2, name: 'bob', role: 'user' }, { id: 99, name: 'admin', role: 'admin' }], viewedBy: user.name });
+});
+
 // --- BOPLA / mass assignment ---
 async function bopla(req, res) {
   const { user } = authUser(req);
