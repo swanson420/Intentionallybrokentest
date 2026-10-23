@@ -95,6 +95,11 @@ for (const m of ['GET', 'POST']) route(m, '/__cb/*', (req, res) => {
 
 // --- control plane ---
 route('GET', '/__control/fixed', (req, res, u) => { fixed = u.searchParams.get('on') === '1'; send(res, 200, { fixed }); });
+route('GET', '/__control/revoke', (req, res, u) => { // browser-friendly revoke: /__control/revoke?token=bob-token
+  const t = u.searchParams.get('token');
+  if (!t || !USERS[t]) return send(res, 400, { error: 'unknown token' });
+  revoked.add(t); send(res, 200, { revoked: t });
+});
 route('GET', '/__control/status', (req, res) => send(res, 200, { fixed, hits }));
 route('GET', '/__control/reset', (req, res) => { revoked = new Set(); uploads = {}; callbacks = []; hits = {}; send(res, 200, { ok: true }); });
 route('GET', '/__callbacks', (req, res) => send(res, 200, callbacks));
