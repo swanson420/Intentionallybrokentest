@@ -64,7 +64,9 @@ function readBody(req, limit = 1_000_000) {
 const parseJson = (buf) => { try { return JSON.parse(buf.toString() || '{}'); } catch { return {}; } };
 
 function authUser(req) {
-  const m = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || '');
+  // Accept Authorization: Bearer <token>, or x-access-key: <token> (with or without 'Bearer ').
+  const raw = req.headers.authorization || req.headers['x-access-key'] || '';
+  const m = /^(?:Bearer\s+)?(\S+)$/i.exec(String(raw).trim());
   return m ? { token: m[1], user: USERS[m[1]] } : { token: null, user: null };
 }
 
@@ -235,6 +237,11 @@ async function bopla(req, res) {
   else Object.assign(prof, body); // applies role, isAdmin, etc.
   send(res, 200, prof);
 }
+route('GET', '/fail/bopla/profile', (req, res) => {
+  const { user } = authUser(req);
+  if (!user) return send(res, 401, { error: 'unauthorized' });
+  send(res, 200, PROFILES[user.id] || (PROFILES[user.id] = { name: user.name, role: user.role }));
+});
 route('POST', '/fail/bopla/profile', bopla);
 route('PATCH', '/fail/bopla/profile', bopla);
 
